@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TRYZEX - Retour Opérateur</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- FIREBASE SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        
+        // TES CLES FIREBASE
+        const firebaseConfig = {
+            apiKey: "AIzaSyBK87cY6l3WwuHcgEKcTQ83Lq4w-uGk49M",
+            authDomain: "tryzex-professional-suite-v11.firebaseapp.com",
+            projectId: "tryzex-professional-suite-v11",
+            storageBucket: "tryzex-professional-suite-v11.firebasestorage.app",
+            messagingSenderId: "212995727765",
+            appId: "1:212995727765:web:ee2537763a1b8a9847569c"
+        };
+        
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Lecture de l'ID depuis le QR Code (Ex: ?id=1001_OP1)
+            const urlParams = new URLSearchParams(window.location.search);
+            const setupId = urlParams.get('id');
+
+            if(setupId) {
+                document.getElementById('setupIdDisplay').innerText = "RÉFÉRENCE : " + setupId;
+            } else {
+                document.getElementById('setupIdDisplay').innerText = "⚠️ SCannez un QR Code valide.";
+                document.getElementById('submitBtn').disabled = true;
+                document.getElementById('submitBtn').classList.add('opacity-50');
+            }
+
+            let compressedImage = null;
+
+            document.getElementById('photoInput').addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if(!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const img = new Image();
+                    img.src = event.target.result;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        let scale = 800 / img.width;
+                        if(scale > 1) scale = 1;
+                        canvas.width = img.width * scale;
+                        canvas.height = img.height * scale;
+                        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                        
+                        compressedImage = canvas.toDataURL('image/jpeg', 0.6); 
+                        document.getElementById('previewImg').src = compressedImage;
+                        document.getElementById('previewImg').classList.remove('hidden');
+                        document.getElementById('photoLabel').innerText = "Photo ajoutée !";
+                    }
+                };
+                reader.readAsDataURL(file);
+            });
+
+            document.getElementById('feedbackForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const btn = document.getElementById('submitBtn');
+                btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> ENVOI...`;
+                btn.disabled = true;
+                
+                try {
+                    await addDoc(collection(db, "journal_atelier"), {
+                        setupId: setupId,
+                        operateur: document.getElementById('nom').value,
+                        message: document.getElementById('message').value,
+                        photo: compressedImage,
+                        timestamp: serverTimestamp()
+                    });
+                    
+                    document.getElementById('formContainer').innerHTML = `
+                        <div class="text-center py-12">
+                            <i class="fa-solid fa-check-circle text-6xl text-emerald-500 mb-4"></i>
+                            <h2 class="text-2xl font-black text-white uppercase italic">Message Envoyé</h2>
+                            <p class="text-slate-400 mt-2">Le bureau a reçu votre remarque en direct.</p>
+                        </div>
+                    `;
+                } catch (error) {
+                    alert("Erreur réseau. Vérifiez votre connexion.");
+                    btn.innerText = "RÉESSAYER";
+                    btn.disabled = false;
+                }
+            });
+        });
+    </script>
+</head>
+<body class="bg-slate-950 text-white font-sans p-4 min-h-screen flex flex-col items-center">
+    <div class="w-full max-w-md mt-4 mb-8">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-black text-orange-500 italic uppercase tracking-widest drop-shadow-[0_0_15px_rgba(234,88,12,0.4)]">TRYZEX</h1>
+            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] mt-1">Liaison Atelier Directe</p>
+        </div>
+
+        <div id="formContainer" class="bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl p-6">
+            <div class="mb-6 border-b border-slate-800 pb-4 text-center">
+                <p id="setupIdDisplay" class="bg-slate-800 text-blue-400 px-4 py-2 rounded-full text-sm font-black uppercase inline-block"></p>
+            </div>
+
+            <form id="feedbackForm" class="space-y-5">
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-widest">Nom de l'opérateur *</label>
+                    <input type="text" id="nom" required placeholder="Nom & Prénom" class="w-full bg-slate-950 border border-slate-700 text-white rounded-xl p-4 font-bold text-sm">
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-widest">Remarque / Alerte *</label>
+                    <textarea id="message" required rows="4" placeholder="Tapez votre message ici..." class="w-full bg-slate-950 border border-slate-700 text-white rounded-xl p-4 font-bold text-sm"></textarea>
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-widest">Preuve Visuelle (Optionnel)</label>
+                    <label class="flex flex-col items-center justify-center w-full h-24 border-2 border-slate-700 border-dashed rounded-xl cursor-pointer bg-slate-950 hover:bg-slate-800 transition">
+                        <i class="fa-solid fa-camera text-2xl text-slate-400 mb-2"></i>
+                        <p id="photoLabel" class="text-[10px] text-slate-300 font-bold uppercase tracking-widest">Toucher pour photographier</p>
+                        <input id="photoInput" type="file" accept="image/*" capture="environment" class="hidden" />
+                    </label>
+                    <img id="previewImg" class="hidden mt-3 w-full h-48 object-cover rounded-xl border border-slate-700" />
+                </div>
+                <button type="submit" id="submitBtn" class="w-full bg-orange-600 text-white font-black uppercase tracking-widest py-4 rounded-xl hover:bg-orange-500 shadow-[0_0_20px_rgba(234,88,12,0.3)] transition mt-4">
+                    ENVOYER AU BUREAU
+                </button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
