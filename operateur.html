@@ -12,7 +12,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         
-        // TES CLES FIREBASE
+        // TES CLES FIREBASE (Remplace bien VOTRE_NOUVELLE_CLE_API par ta vraie clé)
         const firebaseConfig = {
             apiKey: "AIzaSyCjfWQ1Vm5yr_QJyzS-78RDBhUqHDbqjWY",
             authDomain: "tryzex-professional-suite-v11.firebaseapp.com",
@@ -26,16 +26,22 @@
         const db = getFirestore(app);
 
         document.addEventListener('DOMContentLoaded', () => {
-            // Lecture de l'ID depuis le QR Code (Ex: ?id=1001_OP1)
+            // Lecture de l'ID depuis le QR Code (Ex: ?id=9999-1001)
             const urlParams = new URLSearchParams(window.location.search);
             const setupId = urlParams.get('id');
 
+            const displayElement = document.getElementById('setupIdDisplay');
+            const submitBtn = document.getElementById('submitBtn');
+
             if(setupId) {
-                document.getElementById('setupIdDisplay').innerText = "RÉFÉRENCE : " + setupId;
+                displayElement.innerHTML = `<i class="fa-solid fa-microchip mr-2"></i> RÉFÉRENCE : ${setupId}`;
             } else {
-                document.getElementById('setupIdDisplay').innerText = "⚠️ SCannez un QR Code valide.";
-                document.getElementById('submitBtn').disabled = true;
-                document.getElementById('submitBtn').classList.add('opacity-50');
+                // S'il n'y a pas d'ID, on affiche l'URL lue pour comprendre le bug
+                displayElement.classList.replace('text-blue-400', 'text-red-400');
+                displayElement.classList.replace('bg-slate-800', 'bg-red-900/30');
+                displayElement.innerHTML = `⚠️ QR Code Invalide.<br><span class="text-[8px] text-slate-400 font-normal normal-case block mt-2">URL lue : ${window.location.href}</span>`;
+                submitBtn.disabled = true;
+                submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
             }
 
             let compressedImage = null;
@@ -67,9 +73,8 @@
 
             document.getElementById('feedbackForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
-                const btn = document.getElementById('submitBtn');
-                btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> ENVOI...`;
-                btn.disabled = true;
+                submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> ENVOI...`;
+                submitBtn.disabled = true;
                 
                 try {
                     await addDoc(collection(db, "journal_atelier"), {
@@ -85,37 +90,55 @@
                             <i class="fa-solid fa-check-circle text-6xl text-emerald-500 mb-4"></i>
                             <h2 class="text-2xl font-black text-white uppercase italic">Message Envoyé</h2>
                             <p class="text-slate-400 mt-2">Le bureau a reçu votre remarque en direct.</p>
+                            <p class="text-[10px] text-slate-500 mt-6 uppercase">Vous pouvez fermer cette page.</p>
                         </div>
                     `;
                 } catch (error) {
                     alert("Erreur réseau. Vérifiez votre connexion.");
-                    btn.innerText = "RÉESSAYER";
-                    btn.disabled = false;
+                    submitBtn.innerText = "RÉESSAYER";
+                    submitBtn.disabled = false;
                 }
             });
         });
     </script>
 </head>
-<body class="bg-slate-950 text-white font-sans p-4 min-h-screen flex flex-col items-center">
-    <div class="w-full max-w-md mt-4 mb-8">
-        <div class="text-center mb-8">
-            <h1 class="text-3xl font-black text-orange-500 italic uppercase tracking-widest drop-shadow-[0_0_15px_rgba(234,88,12,0.4)]">TRYZEX</h1>
-            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] mt-1">Liaison Atelier Directe</p>
+<body class="bg-slate-950 text-white font-sans p-4 min-h-screen flex flex-col items-center justify-between">
+    
+    <div class="w-full max-w-md mt-4 mb-8 flex-grow flex flex-col">
+        
+        <!-- NOUVEAU LOGO TEXTE SANS FOND BLANC -->
+        <div class="text-center mb-6">
+            <!-- Ligne 1 : TRYZEX PROFESSIONAL SUITE -->
+            <h1 class="text-[26px] sm:text-3xl font-black uppercase leading-none flex flex-wrap justify-center gap-1.5" style="transform: scaleY(1.1);">
+                <span class="text-white tracking-tighter">TRYZEX</span>
+                <span class="text-orange-500 tracking-tight">PROFESSIONAL SUITE</span>
+            </h1>
+            <!-- Ligne 2 : SETUP SHEET ADVANCED MODULE -->
+            <p class="text-[11px] sm:text-xs text-slate-400 font-bold uppercase italic tracking-widest mt-2">
+                Setup Sheet Advanced Module
+            </p>
+            <!-- Petit badge Liaison Atelier -->
+            <div class="mt-4 inline-block bg-slate-900 border border-slate-800 px-4 py-1.5 rounded-full shadow-lg">
+                <p class="text-[9px] text-orange-400 font-black uppercase tracking-[0.2em]">
+                    <i class="fa-solid fa-satellite-dish mr-1 animate-pulse"></i> Liaison Atelier
+                </p>
+            </div>
         </div>
 
-        <div id="formContainer" class="bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl p-6">
+        <!-- FORMULAIRE -->
+        <div id="formContainer" class="bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl p-6 flex-grow">
             <div class="mb-6 border-b border-slate-800 pb-4 text-center">
-                <p id="setupIdDisplay" class="bg-slate-800 text-blue-400 px-4 py-2 rounded-full text-sm font-black uppercase inline-block"></p>
+                <p id="setupIdDisplay" class="bg-slate-800 text-blue-400 px-4 py-2 rounded-xl text-sm font-black uppercase inline-block w-full break-words"></p>
             </div>
 
             <form id="feedbackForm" class="space-y-5">
                 <div>
                     <label class="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-widest">Nom de l'opérateur *</label>
-                    <input type="text" id="nom" required placeholder="Nom & Prénom" class="w-full bg-slate-950 border border-slate-700 text-white rounded-xl p-4 font-bold text-sm">
+                    <input type="text" id="nom" required placeholder="Ex: Jean Dupont" class="w-full bg-slate-950 border border-slate-700 text-white rounded-xl p-4 font-bold text-sm outline-none focus:border-orange-500 transition">
                 </div>
                 <div>
                     <label class="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-widest">Remarque / Alerte *</label>
-                    <textarea id="message" required rows="4" placeholder="Tapez votre message ici..." class="w-full bg-slate-950 border border-slate-700 text-white rounded-xl p-4 font-bold text-sm"></textarea>
+                    <textarea id="message" required rows="4" placeholder="Tapez votre message ici..." class="w-full bg-slate-950 border border-slate-700 text-white rounded-xl p-4 font-bold text-sm outline-none focus:border-orange-500 transition"></textarea>
                 </div>
                 <div>
                     <label class="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-widest">Preuve Visuelle (Optionnel)</label>
@@ -132,5 +155,13 @@
             </form>
         </div>
     </div>
+
+    <!-- FOOTER PETIT GRIS -->
+    <div class="w-full text-center pb-2 shrink-0">
+        <p class="text-[9px] text-slate-600 font-bold uppercase tracking-widest">
+            TRYZEX Professional Suite V12 © 2026 M. ROMD | CODE#UP99
+        </p>
+    </div>
+
 </body>
 </html>
